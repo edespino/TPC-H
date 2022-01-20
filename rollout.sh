@@ -38,7 +38,7 @@ create_directories()
 
 create_directories
 echo "############################################################################"
-echo "TPC-H Script for Pivotal Greenplum Database and Pivotal HAWQ."
+echo "TPC-H Script for VMware Tanzu Greenplum Database."
 echo "############################################################################"
 echo ""
 echo "############################################################################"
@@ -80,6 +80,7 @@ if [ "$RUN_SINGLE_USER_REPORT" == "true" ]; then
 	rm -f $PWD/log/end_single_user_reports.log
 fi
 if [ "$RUN_MULTI_USER" == "true" ]; then
+        rm -f $PWD/log/end_multi_user.log
 	rm -f $PWD/log/end_testing_*.log
 fi
 if [ "$RUN_MULTI_USER_REPORT" == "true" ]; then
@@ -102,8 +103,7 @@ else
 		cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
 	fi
 fi
-	
+
 for i in $(ls -d $PWD/0*); do
-	echo "$i/rollout.sh"
 	$i/rollout.sh $GEN_DATA_SCALE $EXPLAIN_ANALYZE $RANDOM_DISTRIBUTION $MULTI_USER_COUNT $SINGLE_USER_ITERATIONS
 done

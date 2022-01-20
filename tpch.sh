@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-PWD=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+SCRIPTDIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
 MYCMD="tpch.sh"
 MYVAR="tpch_variables.sh"
@@ -13,8 +13,8 @@ check_variables()
 	new_variable="0"
 
 	### Make sure variables file is available
-	if [ ! -f "$PWD/$MYVAR" ]; then
-		touch $PWD/$MYVAR
+	if [ ! -f "$SCRIPTDIR/$MYVAR" ]; then
+		touch $SCRIPTDIR/$MYVAR
 		new_variable=$(($new_variable + 1))
 	fi
 	local count=$(grep "REPO=" $MYVAR | wc -l)
@@ -24,17 +24,21 @@ check_variables()
 	fi
 	local count=$(grep "REPO_URL=" $MYVAR | wc -l)
 	if [ "$count" -eq "0" ]; then
-		echo "REPO_URL=\"https://github.com/pivotalguru/TPC-H\"" >> $MYVAR
+		echo "REPO_URL=\"https://github.com/edespino/TPC-H\"" >> $MYVAR
 		new_variable=$(($new_variable + 1))
 	fi
 	local count=$(grep "ADMIN_USER=" $MYVAR | wc -l)
 	if [ "$count" -eq "0" ]; then
-		echo "ADMIN_USER=\"gpadmin\"" >> $MYVAR
+		echo "ADMIN_USER=\"$(whoami)\"" >> $MYVAR
 		new_variable=$(($new_variable + 1))
 	fi
 	local count=$(grep "INSTALL_DIR=" $MYVAR | wc -l)
 	if [ "$count" -eq "0" ]; then
-		echo "INSTALL_DIR=\"/pivotalguru\"" >> $MYVAR
+		echo "INSTALL_DIR=\"$HOME\"" >> $MYVAR
+		new_variable=$(($new_variable + 1))
+	fi
+	if [ "$count" -eq "0" ]; then
+		echo "WITH_INTERNET=\"false\"" >> $MYVAR
 		new_variable=$(($new_variable + 1))
 	fi
 	local count=$(grep "EXPLAIN_ANALYZE=" $MYVAR | wc -l)
@@ -116,7 +120,7 @@ check_variables()
 		echo "RUN_MULTI_USER_REPORT=\"true\"" >> $MYVAR
 		new_variable=$(($new_variable + 1))
 	fi
-
+	#09
 	if [ "$new_variable" -gt "0" ]; then
 		echo "There are new variables in the tpch_variables.sh file.  Please review to ensure the values are correct and then re-run this script."
 		exit 1
@@ -156,10 +160,10 @@ yum_installs()
 
 	if [ "$YUM_INSTALLED" -gt "0" ]; then
 		if [ "$CURL_INSTALLED" -eq "0" ]; then
-			yum -y install gcc
+			sudo yum -y -q -d1 install gcc
 		fi
 		if [ "$GIT_INSTALLED" -eq "0" ]; then
-			yum -y install git
+			sudo yum -y -q -d1 install git
 		fi
 	else
 		if [ "$CURL_INSTALLED" -eq "0" ]; then
@@ -178,50 +182,65 @@ yum_installs()
 
 repo_init()
 {
-	### Install repo ###
-	echo "############################################################################"
-	echo "Install the github repository."
-	echo "############################################################################"
-	echo ""
+	if [ "${WITH_INTERNET}" = "true" ]; then
+		### Install repo ###
+		echo "############################################################################"
+		echo "Install the github repository."
+		echo "############################################################################"
+		echo ""
 
-	internet_down="0"
-	for j in $(curl google.com 2>&1 | grep "Couldn't resolve host"); do
-		internet_down="1"
-	done
+		internet_down="0"
+		for j in $(curl google.com 2>&1 | grep "Couldn't resolve host"); do
+			internet_down="1"
+		done
 
-	if [ ! -d $INSTALL_DIR ]; then
-		if [ "$internet_down" -eq "1" ]; then
-			echo "Unable to continue because repo hasn't been downloaded and Internet is not available."
-			exit 1
-		else
-			echo ""
-			echo "Creating install dir"
-			echo "-------------------------------------------------------------------------"
-			mkdir $INSTALL_DIR
-			chown $ADMIN_USER $INSTALL_DIR
+		if [ ! -d $INSTALL_DIR ]; then
+			if [ "$internet_down" -eq "1" ]; then
+				echo "Unable to continue because repo hasn't been downloaded and Internet is not available."
+				exit 1
+			else
+				echo ""
+				echo "Creating install dir: $INSTALL_DIR"
+				echo "-------------------------------------------------------------------------"
+				mkdir -vp $INSTALL_DIR
+	                        if [ $? != 0 ] && [ [ "${SUDO_REQUIRED}" = "true" ]]; then
+					sudo mkdir -vp $INSTALL_DIR
+					sudo chown $ADMIN_USER $INSTALL_DIR
+				else
+					echo "FATAL: cannot create install dir: $INSTALL_DIR"
+					exit 1
+	                        fi
+			fi
 		fi
-	fi
 
-	if [ ! -d $INSTALL_DIR/$REPO ]; then
-		if [ "$internet_down" -eq "1" ]; then
-			echo "Unable to continue because repo hasn't been downloaded and Internet is not available."
-			exit 1
+		if [ ! -d $INSTALL_DIR/$REPO ]; then
+			if [ "$internet_down" -eq "1" ]; then
+				echo "Unable to continue because repo hasn't been downloaded and Internet is not available."
+				exit 1
+			else
+				echo ""
+				echo "Creating $REPO directory: $INSTALL_DIR/$REPO"
+				echo "-------------------------------------------------------------------------"
+	                        mkdir -vp $INSTALL_DIR/$REPO
+	                        if [ $? != 0 ] && [ [ "${SUDO_REQUIRED}" = "true" ]]; then
+					sudo mkdir -vp $INSTALL_DIR/$REPO
+					sudo chown $ADMIN_USER $INSTALL_DIR/$REPO
+				else
+					echo "FATAL: cannot create install dir: $INSTALL_DIR"
+					exit 1
+	                        fi
+				cd $INSTALL_DIR; GIT_SSL_NO_VERIFY=true; git clone --depth=1 $REPO_URL -b centos
+			fi
 		else
-			echo ""
-			echo "Creating $REPO directory"
-			echo "-------------------------------------------------------------------------"
-			mkdir $INSTALL_DIR/$REPO
-			chown $ADMIN_USER $INSTALL_DIR/$REPO
-			su -c "cd $INSTALL_DIR; GIT_SSL_NO_VERIFY=true; git clone --depth=1 $REPO_URL" $ADMIN_USER
+			if [ "$internet_down" -eq "0" ]; then
+				git config --global user.email "$ADMIN_USER@$HOSTNAME"
+				git config --global user.name "$ADMIN_USER"
+				cd $INSTALL_DIR/$REPO; GIT_SSL_NO_VERIFY=true; git fetch --all; git reset --hard origin/centos
+			fi
 		fi
 	else
-		chown -R $ADMIN_USER $INSTALL_DIR/$REPO
-		if [ "$internet_down" -eq "0" ]; then
-			git config --global user.email "$ADMIN_USER@$HOSTNAME"
-			git config --global user.name "$ADMIN_USER"
-			su -c "cd $INSTALL_DIR/$REPO; GIT_SSL_NO_VERIFY=true; git fetch --all; git reset --hard origin/master" $ADMIN_USER
-		fi
-	fi
+		cd $INSTALL_DIR/$REPO
+        fi
 }
 
 script_check()
@@ -232,7 +251,7 @@ script_check()
 	echo "############################################################################"
 	echo ""
 	# Must be executed after the repo has been pulled
-	local d=`diff $PWD/$MYCMD $INSTALL_DIR/$REPO/$MYCMD | wc -l`
+	local d=`diff $SCRIPTDIR/$MYCMD $INSTALL_DIR/$REPO/$MYCMD | wc -l`
 
 	if [ "$d" -eq "0" ]; then
 		echo "$MYCMD script is up to date so continuing to TPC-H."
@@ -240,7 +259,7 @@ script_check()
 	else
 		echo "$MYCMD script is NOT up to date."
 		echo ""
-		cp $INSTALL_DIR/$REPO/$MYCMD $PWD/$MYCMD
+		cp $INSTALL_DIR/$REPO/$MYCMD $SCRIPTDIR/$MYCMD
 		echo "After this script completes, restart the $MYCMD with this command:"
 		echo "./$MYCMD"
 		exit 1
@@ -264,12 +283,10 @@ echo_variables()
 # Body
 ##################################################################################################################################################
 
-check_user
 check_variables
 yum_installs
 repo_init
 script_check
 echo_variables
 
-su --session-command="cd \"$INSTALL_DIR/$REPO\"; ./rollout.sh $GEN_DATA_SCALE $EXPLAIN_ANALYZE $RANDOM_DISTRIBUTION $MULTI_USER_COUNT $RUN_COMPILE_TPCH $RUN_GEN_DATA $RUN_INIT $RUN_DDL $RUN_LOAD $RUN_SQL $RUN_SINGLE_USER_REPORT $RUN_MULTI_USER $RUN_MULTI_USER_REPORT $SINGLE_USER_ITERATIONS" $ADMIN_USER
-
+cd "$INSTALL_DIR/$REPO"; ./rollout.sh $GEN_DATA_SCALE $EXPLAIN_ANALYZE $RANDOM_DISTRIBUTION $MULTI_USER_COUNT $RUN_COMPILE_TPCH  $RUN_GEN_DATA $RUN_INIT $RUN_DDL $RUN_LOAD $RUN_SQL $RUN_SINGLE_USER_REPORT $RUN_MULTI_USER $RUN_MULTI_USER_REPORT $SINGLE_USER_ITERATIONS

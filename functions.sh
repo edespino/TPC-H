@@ -42,30 +42,20 @@ get_version()
 }
 source_bashrc()
 {
-	startup_file=".bashrc"
-	if [ ! -f ~/.bashrc ]; then
-		if [ -f ~/.bash_profile ]; then
-			startup_file=".bash_profile"
-		else
-			echo "touch ~/.bashrc"
-			touch ~/.bashrc
-		fi
+	startup_file=~/.bashrc
+	if [ -f ${startup_file} ]; then
+		# don't fail if an error is happening in the admin's profile
+		source ${startup_file} || true
 	fi
-	for g in $(grep "greenplum_path.sh" ~/$startup_file | grep -v "\#"); do
-		GREENPLUM_PATH=$g
-	done
-	if [ "$GREENPLUM_PATH" == "" ]; then
+	count=$(grep -v "^#" ${startup_file} | grep "greenplum_path" | wc -l)
+	if [ "$count" -eq "0" ]; then
 		get_version
 		if [[ "$VERSION" == *"gpdb"* ]]; then
-			echo "$startup_file does not contain greenplum_path.sh"
-			echo "Please update your $startup_file for $ADMIN_USER and try again."
+			echo "${startup_file} does not contain greenplum_path.sh"
+			echo "Please update your ${startup_file} for $ADMIN_USER and try again."
 			exit 1
 		fi
 	fi
-	echo "source ~/$startup_file"
-	# don't fail if an error is happening in the admin's profile
-	source ~/$startup_file || true
-	echo ""
 }
 init_log()
 {
@@ -75,6 +65,7 @@ init_log()
 
 	logfile=rollout_$1.log
 	rm -f $LOCAL_PWD/log/$logfile
+        print_section_header
 }
 start_log()
 {
@@ -118,6 +109,7 @@ end_step()
 {
 	local logfile=end_$1.log
 	touch $LOCAL_PWD/log/$logfile
+        print_section_footer
 }
 create_hosts_file()
 {
@@ -129,4 +121,39 @@ create_hosts_file()
 		#must be PostgreSQL
 		echo $MASTER_HOST > $LOCAL_PWD/segment_hosts.txt
 	fi
+}
+
+print_section_header ()
+{
+    SECONDS=0
+cat <<EOF
+
+############################################################################
+############################################################################
+                                START
+----------------------------------------------------------------------------
+SECTION ....... : $( basename $PWD )
+TIMESTAMP ..... : $( date )
+----------------------------------------------------------------------------
+
+EOF
+}
+
+print_section_footer ()
+{
+    secs=$SECONDS
+
+    cat <<EOF
+
+----------------------------------------------------------------------------
+                               FINISHED
+----------------------------------------------------------------------------
+SECTION ....... : $( basename $PWD )
+TIMESTAMP ..... : $( date )
+ELAPSED TIME .. : $( printf '%02dh:%02dm:%02ds\n' $((secs/3600)) $((secs%3600/60)) $((secs%60)) )
+############################################################################
+############################################################################
+
+
+EOF
 }
