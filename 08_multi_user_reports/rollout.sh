@@ -1,6 +1,12 @@
 #!/bin/bash
 set -e
 
+GEN_DATA_SCALE=$1
+EXPLAIN_ANALYZE=$2
+RANDOM_DISTRIBUTION=$3
+MULTI_USER_COUNT=$4
+SINGLE_USER_ITERATIONS=$5
+
 PWD=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 source $PWD/../functions.sh
 source_bashrc
