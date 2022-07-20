@@ -95,7 +95,7 @@ else
 		schema_name=$(echo $i | awk -F '.' '{print $2}')
 		table_name=$(echo $i | awk -F '.' '{print $3}')
 		for p in $(seq 1 $PARALLEL); do
-			filename=$(echo $PGDATA/tpch_$p/$table_name.tbl*)
+			filename=$(echo $PGDATA/../tpch_$p/$table_name.tbl*)
 			if [[ -f $filename && -s $filename ]]; then
 				start_log
 				filename="'""$filename""'"
