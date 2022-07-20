@@ -42,11 +42,17 @@ get_version()
 }
 source_bashrc()
 {
-	startup_file=~/.bashrc
-	if [ -f ${startup_file} ]; then
-		# don't fail if an error is happening in the admin's profile
+	if [ -f ~/.bashrc ]; then
+		startup_file=~/.bashrc
+	elif [ -f ~/.bash_profile ]; then
+		startup_file=~/.bash_profile
+	fi
+
+	# don't fail if an error is happening in the admin's profile
+	if [ -n "${startup_file}" ]; then
 		source ${startup_file} || true
 	fi
+
 	count=$(grep -v "^#" ${startup_file} | grep "greenplum_path" | wc -l)
 	if [ "$count" -eq "0" ]; then
 		get_version

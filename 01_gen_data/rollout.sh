@@ -37,7 +37,6 @@ copy_generate_data()
 }
 gen_data()
 {
-	get_version
 	if [[ "$VERSION" == *"gpdb"* ]]; then
 		PARALLEL=$(gpstate | grep "Total primary segments" | awk -F '=' '{print $2}')
 		if [ "$PARALLEL" == "" ]; then
@@ -103,8 +102,11 @@ start_log
 schema_name="tpch"
 table_name="gen_data"
 
-kill_orphaned_data_gen
-copy_generate_data
+get_version
+if [[ "$VERSION" == *"gpdb"* ]]; then
+    kill_orphaned_data_gen
+    copy_generate_data
+fi
 gen_data
 
 echo ""

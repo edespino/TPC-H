@@ -33,11 +33,14 @@ copy_tpc()
 	cp $PWD/dbgen/qgen ../*_multi_user/queries/
 	cp $PWD/dbgen/dists.dss ../*_multi_user/queries/
 
-	#copy the compiled dbgen program to the segment hosts
-	for i in $(cat $PWD/../segment_hosts.txt); do
-		echo "copy tpch binaries to $i:$ADMIN_HOME"
-		scp dbgen/dbgen dbgen/dists.dss $i:$ADMIN_HOME/
-	done
+	get_version
+	if [[ "$VERSION" == *"gpdb"* ]]; then
+		#copy the compiled dbgen program to the segment hosts
+		for i in $(cat $PWD/../segment_hosts.txt); do
+			echo "copy tpch binaries to $i:$ADMIN_HOME"
+			scp dbgen/dbgen dbgen/dists.dss $i:$ADMIN_HOME/
+		done
+	fi
 }
 
 make_tpc
