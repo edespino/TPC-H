@@ -59,32 +59,53 @@ echo "RUN_MULTI_USER_REPORT: $RUN_MULTI_USER_REPORT"
 echo "############################################################################"
 echo ""
 if [ "$RUN_COMPILE_TPCH" == "true" ]; then
-	rm -f $PWD/log/end_compile_tpch.log
+    rm -f $PWD/log/end_compile_tpch.log
+else
+    touch $PWD/log/end_compile_tpch.log
 fi
 if [ "$RUN_GEN_DATA" == "true" ]; then
-	rm -f $PWD/log/end_gen_data.log
+    rm -f $PWD/log/end_gen_data.log
+else
+    touch $PWD/log/end_gen_data.log
 fi
 if [ "$RUN_INIT" == "true" ]; then
-	rm -f $PWD/log/end_init.log
+    rm -f $PWD/log/end_init.log
+else
+    touch $PWD/log/end_init.log
 fi
 if [ "$RUN_DDL" == "true" ]; then
-	rm -f $PWD/log/end_ddl.log
+    rm -f $PWD/log/end_ddl.log
+else
+    touch $PWD/log/end_ddl.log
 fi
 if [ "$RUN_LOAD" == "true" ]; then
-	rm -f $PWD/log/end_load.log
+    rm -f $PWD/log/end_load.log
+else
+    touch $PWD/log/end_load.log
 fi
 if [ "$RUN_SQL" == "true" ]; then
-	rm -f $PWD/log/end_sql.log
+    rm -f $PWD/log/end_sql.log
+else
+    touch $PWD/log/end_sql.log
 fi
 if [ "$RUN_SINGLE_USER_REPORT" == "true" ]; then
-	rm -f $PWD/log/end_single_user_reports.log
+    rm -f $PWD/log/end_single_user_reports.log
+else
+    touch $PWD/log/end_single_user_reports.log
 fi
 if [ "$RUN_MULTI_USER" == "true" ]; then
-        rm -f $PWD/log/end_multi_user.log
-	rm -f $PWD/log/end_testing_*.log
+    rm -f $PWD/log/end_multi_user.log
+    rm -f $PWD/log/end_testing_*.log
+else
+    touch $PWD/log/end_multi_user.log
+    for i in $(seq 1 ${MULTI_USER_COUNT}); do
+        touch $PWD/log/end_testing_"${i}".log
+    done
 fi
 if [ "$RUN_MULTI_USER_REPORT" == "true" ]; then
-	rm -f $PWD/log/end_multi_user_reports.log
+    rm -f $PWD/log/end_multi_user_reports.log
+else
+    touch $PWD/log/end_multi_user_reports.log
 fi
 
 get_version
@@ -105,5 +126,5 @@ else
 fi
 
 for i in $(ls -d $PWD/0*); do
-	$i/rollout.sh $GEN_DATA_SCALE $EXPLAIN_ANALYZE $RANDOM_DISTRIBUTION $MULTI_USER_COUNT $SINGLE_USER_ITERATIONS
+    $i/rollout.sh $GEN_DATA_SCALE $EXPLAIN_ANALYZE $RANDOM_DISTRIBUTION $MULTI_USER_COUNT $SINGLE_USER_ITERATIONS
 done
