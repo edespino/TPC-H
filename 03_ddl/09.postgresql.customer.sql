@@ -1,4 +1,4 @@
-CREATE TABLE tpch.customer
+CREATE UNLOGGED TABLE tpch.customer
 (C_CUSTKEY INT, 
 C_NAME VARCHAR(25),
 C_ADDRESS VARCHAR(40),
@@ -8,4 +8,4 @@ C_ACCTBAL DECIMAL(15,2),
 C_MKTSEGMENT CHAR(10),
 C_COMMENT VARCHAR(117),
 dummy text);
-ALTER TABLE tpch.customer ADD PRIMARY KEY (c_custkey);
+-- ALTER TABLE tpch.customer ADD PRIMARY KEY (c_custkey);

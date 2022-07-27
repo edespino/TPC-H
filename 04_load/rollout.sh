@@ -87,21 +87,45 @@ else
 		exit 1
 	fi
 
-	PARALLEL=$(lscpu --parse=cpu | grep -v "#" | wc -l)
-	echo "parallel: $PARALLEL"
+	## PARALLEL=$(lscpu --parse=cpu | grep -v "#" | wc -l)
+	## PARALLEL=48
+	## echo "parallel: $PARALLEL"
 
 	for i in $(ls $PWD/*.$filter.*.sql); do
 		id=$(echo $i | awk -F '.' '{print $1}')
 		schema_name=$(echo $i | awk -F '.' '{print $2}')
 		table_name=$(echo $i | awk -F '.' '{print $3}')
-		for p in $(seq 1 $PARALLEL); do
-			filename=$(echo $PGDATA/../tpch_$p/$table_name.tbl*)
+
+                for filename in $( ls $PGDATA/../gpseg*-tpch/$table_name.tbl* ); do
+                        rm -f pg_bulkload.ctl
+                        cat > pg_bulkload.ctl <<-EOF
+				WRITER = PARALLEL
+				OUTPUT = tpch.${table_name}
+				INPUT = ${filename}
+
+				TYPE = CSV
+				QUOTE = "\""
+				ESCAPE = \\
+				DELIMITER = "|"
+			EOF
+
 			if [[ -f $filename && -s $filename ]]; then
-				start_log
 				filename="'""$filename""'"
-				echo "psql -v ON_ERROR_STOP=1 -f $i -v filename=\"$filename\" | grep COPY | awk -F ' ' '{print \$2}'"
-				tuples=$(psql -v ON_ERROR_STOP=1 -f $i -v filename="$filename" | grep COPY | awk -F ' ' '{print $2}'; exit ${PIPESTATUS[0]})
-				log $tuples
+                                echo ""
+                                echo "======================================================================"
+                                echo "Timestamp .. : $(date)"
+                                echo "Loading .... : ${filename}"
+                                echo "Command .... : /usr/pgsql-14/bin/pg_bulkload -d postgres pg_bulkload.ctl"
+                                echo ""
+                                echo "pg_bulkload.ctl"
+                                echo "---------------"
+                                cat pg_bulkload.ctl
+                                echo "----------------------------------------------------------------------"
+                                echo ""
+                                /usr/pgsql-14/bin/pg_bulkload -d postgres pg_bulkload.ctl
+                        else
+                            echo ""
+                            echo "SKIPPING: ${filename} - FILE DOES NOT EXIST and/or DOES NOT HAVE SIZE GREATER THAN ZERO"
 			fi
 		done
 	done
@@ -121,7 +145,6 @@ if [[ "$VERSION" == *"gpdb"* ]]; then
 	fi
 fi
 
-
 if [[ "$VERSION" == *"gpdb"* ]]; then
 	schema_name="tpch"
 	table_name="tpch"
@@ -138,7 +161,13 @@ else
 		start_log
 		schema_name=$(echo $t | awk -F '|' '{print $1}')
 		table_name=$(echo $t | awk -F '|' '{print $2}')
-		echo "psql -v ON_ERROR_STOP=1 -q -t -A -c \"ANALYZE $schema_name.$table_name;\""
+		echo ""
+		echo "======================================================================"
+		echo "Timestamp .. : $(date)"
+		echo "Loading .... : ${filename}"
+		echo "Command .... : psql -v ON_ERROR_STOP=1 -q -t -A -c \"ANALYZE $schema_name.$table_name;\""
+		echo "----------------------------------------------------------------------"
+		echo ""
 		psql -v ON_ERROR_STOP=1 -q -t -A -c "ANALYZE $schema_name.$table_name;"
 		tuples="0"
 		log $tuples

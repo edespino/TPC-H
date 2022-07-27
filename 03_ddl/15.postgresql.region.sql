@@ -1,6 +1,6 @@
-CREATE TABLE tpch.region
+CREATE UNLOGGED TABLE tpch.region
 (R_REGIONKEY INTEGER, 
 R_NAME CHAR(25),
 R_COMMENT VARCHAR(152),
 dummy text);
-ALTER TABLE tpch.region ADD PRIMARY KEY (r_regionkey);
+-- ALTER TABLE tpch.region ADD PRIMARY KEY (r_regionkey);
